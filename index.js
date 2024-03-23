@@ -1,3 +1,6 @@
+// *************************************** HARD CODE **********************************************
+
+
 // const functions = require('firebase-functions');
 // const axios = require('axios');
 
@@ -105,7 +108,7 @@
 //     }
 // });
 
-
+// ********************************** WORK WITH FIRESTORE CLOUD FUNCTIONS ****************************
 
 const { initializeApp, applicationDefault, cert } = require('firebase-admin/app');
 const { getFirestore, Timestamp, FieldValue, Filter } = require('firebase-admin/firestore');
@@ -123,7 +126,7 @@ async function calculateDistanceUsingAPI(orderLocation, deliveryPartnerLocation)
             params: {
                 origins: `${orderLocation.latitude},${orderLocation.longitude}`,
                 destinations: `${deliveryPartnerLocation.locationCordinates[0]},${deliveryPartnerLocation.locationCordinates[1]}`,
-                key: 'AIzaSyAs3PWPbBMyFsNv9R-OKFbEaOO9VAHuB4c'
+                key: ''
             }
         });
             if(response.data && response.data.status === 'OK' && response.data.rows && response.data.rows.length > 0){
