@@ -10,7 +10,7 @@
 //             params: {
 //                 origins: `${orderLocation.location.geopoint[0]},${orderLocation.location.geopoint[1]}`,
 //                 destinations: `${deliveryPartnerLocation.locationCordinates[0]},${deliveryPartnerLocation.locationCordinates[1]}`,
-//                 key: 'AIzaSyAs3PWPbBMyFsNv9R-OKFbEaOO9VAHuB4c'
+//                 key: ''
 //             }
 //         });
 
