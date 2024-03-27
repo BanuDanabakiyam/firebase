@@ -80,14 +80,14 @@
 //         const orders = await fetchOrders();
 //         const deliveryPartners = await fetchDeliveryPartners();
 //         const nearestDistances = [];
-//         let availabeleDelivery = [...deliveryPartners];
+//         let availableDelivery = [...deliveryPartners];
 
 
 //         for (const order of orders) {
 //             let shortestDistance = Infinity;
 //             let nearestDeliveryPartner = '';
   
-//             for (const deliveryPartner of availabeleDelivery) {
+//             for (const deliveryPartner of availableDelivery) {
 //                 functions.logger.log("Delivery",deliveryPartner.id);
                 
 //                 const distance = await calculateDistanceUsingAPI(order, deliveryPartner);
@@ -98,7 +98,7 @@
 
 //                 }
 //             }
-//             availabeleDelivery = availabeleDelivery.filter(obj => obj.id !== nearestDeliveryPartner);
+//             availableDelivery = availableDelivery.filter(obj => obj.id !== nearestDeliveryPartner);
 //             nearestDistances.push({ OrderId: order.id, NearestDeliveryPartnerId: nearestDeliveryPartner, DistanceInKM: shortestDistance });
 //         }
 //         return res.status(200).json(nearestDistances);
@@ -126,19 +126,19 @@ async function calculateDistanceUsingAPI(orderLocation, deliveryPartnerLocation)
             params: {
                 origins: `${orderLocation.latitude},${orderLocation.longitude}`,
                 destinations: `${deliveryPartnerLocation.locationCordinates[0]},${deliveryPartnerLocation.locationCordinates[1]}`,
-                key: ''
+                key: 'AIzaSyAs3PWPbBMyFsNv9R-OKFbEaOO9VAHuB4c'
             }
         });
             if(response.data && response.data.status === 'OK' && response.data.rows && response.data.rows.length > 0){
                 return Math.floor(response.data.rows[0].elements[0].distance.value/1000);
             }else {
                 console.log("Unsuccessful response from API : ",response.data.status);
-                return Infinity;
+                return -1;
             }
             
     } catch (error) {
-        // console.log("Error : ",error)
-        return Infinity;
+        console.log("Error : ",error)
+        return -1;
     }
 }
 async function fetchOrders() {
@@ -193,7 +193,7 @@ async function fetchDeliveryPartners() {
             },
             {
                 id:'DeliveryPartner-2',
-                locationCordinates:[11.0310, 77.0436]
+                locationCordinates:[11.0448, 77.0125]
                 },
             {
                 id:'DeliveryPartner-3',
@@ -219,28 +219,54 @@ exports.findNearestDistanceForOrders = functions.https.onRequest(async (req, res
 
         const deliveryPartners = await fetchDeliveryPartners();
         const nearestDistances = [];
-        let availabeleDelivery = [...deliveryPartners];
-        
-       for (const order of orders) {
-            let shortestDistance = Infinity;
+
+        if(deliveryPartners.length === 0){
+            return res.status(404).send("No Delivery Partners are available");
+        }
+
+        if(deliveryPartners.length === 1){
+            let shortestDistance = 9999;
             let nearestDeliveryPartner = '';
-  
-            for (const deliveryPartner of availabeleDelivery) {
+            let orderId = '';
 
-                
+            const singleDeliveryPartner = deliveryPartners[0];
+            for (const order of orders) {
+                const distance = await calculateDistanceUsingAPI(order, singleDeliveryPartner);
+                if (distance >= 0 && distance < shortestDistance ) {
+                    orderId = order;
+                    shortestDistance = distance;
+                    nearestDeliveryPartner = singleDeliveryPartner.id;
+                }
+            }
+            nearestDistances.push({ OrderId: orderId.id, NearestDeliveryPartnerId: nearestDeliveryPartner, DistanceInKM: shortestDistance });
+            return res.status(200).json(nearestDistances);
+        }
+
+        if(deliveryPartners.length < orders.length){
+            let availableDelivery = [...deliveryPartners];
+        for (const order of orders) {
+            let shortestDistance = 9999;
+            let nearestDeliveryPartner = '';
+        
+            for (const deliveryPartner of availableDelivery) {
                 const distance = await calculateDistanceUsingAPI(order, deliveryPartner);
-                console.log("Distance ",distance);
-
-                if (distance < shortestDistance) {
+                if (distance >= 0 && distance < shortestDistance ) {
                     shortestDistance = distance;
                     nearestDeliveryPartner = deliveryPartner.id;
                 }
             }
-            availabeleDelivery = availabeleDelivery.filter(obj => obj.id !== nearestDeliveryPartner);
-            nearestDistances.push({ OrderId: order.id, NearestDeliveryPartnerId: nearestDeliveryPartner, DistanceInKM: shortestDistance });
-        }
+            if(nearestDeliveryPartner !== ''){
+                shortestDistance = shortestDistance === 9999 ? 0 : shortestDistance;
+                availableDelivery = availableDelivery.filter(obj => obj.id !== nearestDeliveryPartner);
+                nearestDistances.push({ OrderId: order.id, NearestDeliveryPartnerId: nearestDeliveryPartner, DistanceInKM: shortestDistance });
+                functions.logger.log({OrderId : order.id},"Allocated Nearest Delivery Partner : ",nearestDeliveryPartner);
+            }else{
+                functions.logger.log("No Delivery partners are available to this order",{ OrderId : order.id});
+            }
+}
         return res.status(200).json(nearestDistances);
-    } catch (error) {
+    }
+} catch (error) {
         console.error('Error:', error.message);
         return res.status(500).send('Internal Server Error');
     }
